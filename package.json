@@ -1,0 +1,23 @@
+{
+  "name": "log-analyzer-api",
+  "version": "1.0.0",
+  "description": "AI-powered log and error analysis API using Ollama",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.22.1",
+    "ollama": "^0.5.0"
+  },
+  "keywords": [
+    "log-analysis",
+    "security",
+    "ai",
+    "ollama"
+  ],
+  "author": "",
+  "license": "MIT"
+}
