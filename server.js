@@ -15,6 +15,7 @@ const path = require('path');
 // Import our services
 const { analyzeWithRules, extractIPs, extractPaths } = require('./services/ruleEngine');
 const { analyzeLog, analyzeLogStream, checkOllama, MODEL } = require('./services/ollamaService');
+const { validateAndCorrect } = require('./services/analysisValidator');
 
 // Create Express app
 const app = express();
@@ -81,14 +82,14 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        console.log(`\n📝 Analyzing log: "${logText.substring(0, 50)}..."`);
+        console.log(`\n[LOG] Analyzing: "${logText.substring(0, 50)}..."`);
 
         // Step 1: Quick analysis with rule engine
         const ruleResult = analyzeWithRules(logText);
-        console.log(`🔍 Rule engine: ${ruleResult.matchCount} pattern(s) matched`);
+        console.log(`[RULES] Rule engine: ${ruleResult.matchCount} pattern(s) matched`);
 
         // Step 2: Deep analysis with AI
-        console.log('🤖 Sending to Ollama...');
+        console.log('[AI] Sending to Ollama...');
         const aiResult = await analyzeLog(logText, ruleResult);
 
         // Handle Ollama errors
@@ -101,18 +102,23 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        // Step 3: Build the response
+        // Step 3: Validate and correct AI output with deterministic rules
+        console.log('[VALIDATE] Validating AI output...');
+        const validated = validateAndCorrect(aiResult.analysis, logText);
+
+        // Step 4: Build the response
         const response = {
-            // Main analysis from AI
-            type: aiResult.analysis.type,
-            risk: aiResult.analysis.risk,
-            confidence: aiResult.analysis.confidence || 0.85,
-            explanation: aiResult.analysis.explanation,
-            suggestion: aiResult.analysis.suggestion,
-            isSuspicious: aiResult.analysis.isSuspicious,
+            // Validated analysis (AI output corrected by rules)
+            type: validated.type,
+            risk: validated.risk,
+            confidence: validated.confidence,
+            explanation: validated.explanation,
+            suggestion: validated.suggestion,
+            isSuspicious: validated.isSuspicious,
+            status: validated.status, // NEW: Determined by rules, not AI
 
             // Additional details
-            indicators: aiResult.analysis.indicators || [],
+            indicators: validated.indicators,
             extractedIPs: extractIPs(logText),
             extractedPaths: extractPaths(logText),
 
@@ -120,16 +126,20 @@ app.post('/api/analyze', async (req, res) => {
             _meta: {
                 model: aiResult.model,
                 ruleMatches: ruleResult.matchCount,
-                quickMatch: ruleResult.hasMatch ? ruleResult.primaryMatch.name : null
+                quickMatch: ruleResult.hasMatch ? ruleResult.primaryMatch.name : null,
+                validation: validated._meta // Shows adjustments made
             }
         };
 
-        console.log(`✅ Analysis complete: ${response.type} (${response.risk} risk)`);
+        console.log(`[DONE] Analysis complete: ${response.type} | Status: ${response.status} | Risk: ${response.risk}`);
+        if (validated._meta.adjustments.length > 0) {
+            console.log(`   Adjustments: ${validated._meta.adjustments.join(', ')}`);
+        }
 
         res.json(response);
 
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('[ERROR]', error);
         res.status(500).json({
             error: 'Internal server error',
             message: error.message
@@ -152,7 +162,7 @@ app.post('/api/analyze-stream', async (req, res) => {
         }
 
         const logText = log.trim();
-        console.log(`\n📝 [Stream] Analyzing log: "${logText.substring(0, 50)}..."`);
+        console.log(`\n[STREAM] Analyzing: "${logText.substring(0, 50)}..."`);
 
         // Set up SSE headers
         res.setHeader('Content-Type', 'text/event-stream');
@@ -173,17 +183,22 @@ app.post('/api/analyze-stream', async (req, res) => {
             if (chunk.type === 'chunk') {
                 res.write(`data: ${JSON.stringify({ type: 'thinking', content: chunk.content })}\n\n`);
             } else if (chunk.type === 'complete') {
-                // Build final response
+                // Validate AI output with deterministic rules
+                const validated = validateAndCorrect(chunk.analysis, logText);
+
+                // Build final response (validated)
                 const response = {
-                    type: chunk.analysis.type,
-                    risk: chunk.analysis.risk,
-                    confidence: chunk.analysis.confidence || 0.85,
-                    explanation: chunk.analysis.explanation,
-                    suggestion: chunk.analysis.suggestion,
-                    isSuspicious: chunk.analysis.isSuspicious,
-                    indicators: chunk.analysis.indicators || [],
+                    type: validated.type,
+                    risk: validated.risk,
+                    confidence: validated.confidence,
+                    explanation: validated.explanation,
+                    suggestion: validated.suggestion,
+                    isSuspicious: validated.isSuspicious,
+                    status: validated.status,
+                    indicators: validated.indicators,
                     extractedIPs: extractIPs(logText),
-                    extractedPaths: extractPaths(logText)
+                    extractedPaths: extractPaths(logText),
+                    _meta: validated._meta
                 };
                 res.write(`data: ${JSON.stringify({ type: 'complete', result: response })}\n\n`);
             } else if (chunk.type === 'error') {
@@ -195,7 +210,7 @@ app.post('/api/analyze-stream', async (req, res) => {
         res.end();
 
     } catch (error) {
-        console.error('❌ Stream Error:', error);
+        console.error('[STREAM ERROR]', error);
         res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
         res.end();
     }
@@ -211,9 +226,9 @@ app.use('/api/*', (req, res) => {
 // ==================== START SERVER ====================
 
 app.listen(PORT, () => {
-    console.log('\n🚀 Log Analyzer API is running!');
-    console.log(`📍 Server: http://localhost:${PORT}`);
-    console.log(`🤖 Model: ${MODEL}`);
-    console.log('\n💡 Make sure Ollama is running (ollama serve)');
-    console.log('📝 Open the URL in your browser to use the web interface\n');
+    console.log('\n=== Log Analyzer API is running! ===');
+    console.log(`Server: http://localhost:${PORT}`);
+    console.log(`Model: ${MODEL}`);
+    console.log('\nMake sure Ollama is running (ollama serve)');
+    console.log('Open the URL in your browser to use the web interface\n');
 });
